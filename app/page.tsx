@@ -305,11 +305,11 @@ export default function CertificateStudio() {
       </div>
 
       {step === 1 && (
-        <section className="grid md:grid-cols-2 gap-6 items-start">
+        <section className="md:grid-cols-2 gap-6 items-start">
           <div className="border rounded-2xl p-4 bg-white shadow-sm">
             <h2 className="font-semibold mb-2">1) Загрузка шаблона (PNG/JPG)</h2>
             <p className="text-sm text-gray-600 mb-3">
-              Выбери файл сертификата. Он загрузится на сервер и отобразится здесь для разметки.
+              Выбери файл шаблона сертификата.
             </p>
             <label className="block">
               <input
