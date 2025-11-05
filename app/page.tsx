@@ -22,9 +22,9 @@ const FIELD_LABEL: Record<FieldName, string> = {
   id: "ID",
 };
 const FIELD_COLOR: Record<FieldName, string> = {
-  fio: "rgba(59,130,246,0.35)", // blue-500/35
-  course: "rgba(34,197,94,0.35)", // green-500/35
-  id: "rgba(234,88,12,0.35)", // orange-600/35
+  fio: "rgba(59,130,246,0.35)", 
+  course: "rgba(34,197,94,0.35)",
+  id: "rgba(234,88,12,0.35)",
 };
 
 export default function CertificateStudio() {
@@ -109,12 +109,10 @@ export default function CertificateStudio() {
     if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // фон
     if (imageEl && imageNatural && viewW && viewH) {
       ctx.drawImage(imageEl, 0, 0, viewW, viewH);
     }
 
-    // постоянные зоны
     boxes.forEach((b) => {
       ctx.fillStyle = FIELD_COLOR[b.name];
       ctx.strokeStyle = "rgba(0,0,0,0.7)";
@@ -331,15 +329,6 @@ export default function CertificateStudio() {
               </div>
             </label>
             {uploading && <div className="mt-3 text-sm">Загрузка...</div>}
-          </div>
-
-          <div className="border rounded-2xl p-4 bg-white shadow-sm">
-            <h3 className="font-semibold mb-2">Подсказка</h3>
-            <ul className="text-sm list-disc pl-5 space-y-1 text-gray-700">
-              <li>Шаблон лучше до 4000×3000 px для быстрой обработки.</li>
-              <li>Размечай зоны для ФИО, Курс и ID — можно мышкой или числами.</li>
-              <li>После сохранения зон можно генерировать одиночно или пачкой (CSV).</li>
-            </ul>
           </div>
         </section>
       )}
