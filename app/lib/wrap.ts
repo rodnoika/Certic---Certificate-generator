@@ -1,9 +1,6 @@
-// lib/wrap.ts
-// Универсальный перенос + подбор размера шрифта так, чтобы текст точно влезал в box (W×H)
-
-const AVG_CHAR_FACTOR = 0.55;     // средняя ширина символа ≈ fontPx * 0.55 (под sans-serif)
-const LINE_HEIGHT_EM  = 1.25;     // межстрочный интервал
-const MIN_FONT_PX     = 10;       // «пол» шрифта чтобы не превратился в 0
+const AVG_CHAR_FACTOR = 0.55;    
+const LINE_HEIGHT_EM  = 1.25;     
+const MIN_FONT_PX     = 10;       
 
 function hardSplit(token: string, maxChars: number) {
   if (token.length <= maxChars) return [token];
@@ -36,10 +33,6 @@ function layoutWithFontPx(text: string, boxW: number, boxH: number, fontPx: numb
   return { lines, totalH, fitsHeight, fontPx, maxCharsPerLine };
 }
 
-/**
- * Подбирает максимально возможный fontPx (не выше baseMaxFontPx), при котором
- * текст с переносами помещается И по ширине (через maxCharsPerLine), И по высоте.
- */
 export function wrapToBox(
   text: string,
   boxW: number,
