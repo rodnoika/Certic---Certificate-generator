@@ -22,7 +22,7 @@ function svgTextBlock(lines: string[], fontPx: number, align: Align, x: number, 
   const lineGap = Math.round(fontPx * 1.25);
   const startY = y + Math.max(fontPx, Math.min(h, Math.round((h - (lines.length - 1) * lineGap) / 2)));
   const tspans = lines.map((ln, i) => `<tspan x="${xPos}" dy="${i===0?0:lineGap}">${escapeXml(ln)}</tspan>`).join("");
-  return `<text x="${xPos}" y="${startY}" text-anchor="${anchor}" font-family="${DEFAULT_FONT_FAMILY}" font-size="${fontPx}" fill="${color}">${tspans}</text>`;
+  return `<text x="${xPos}" y="${startY}" text-anchor="${anchor}" font-size="${fontPx}" fill="${color}">${tspans}</text>`;
 }
 
 export async function renderCertificate(opts: {
