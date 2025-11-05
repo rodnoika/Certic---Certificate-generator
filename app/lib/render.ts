@@ -1,13 +1,32 @@
 import sharp from "sharp";
 import { wrapToBox } from "./wrap";
 import { slugify } from "./slug";
+import path from "path/win32";
 
 export type FieldName = "fio" | "course" | "id";
 export type Align = "left" | "center" | "right";
 export type FieldBox = { name: FieldName; x: number; y: number; w: number; h: number; align: Align };
 
-const DEFAULT_FONT_FAMILY = "Inter, Arial, sans-serif";
+const FONT_PATH =  path.join(process.cwd(), "public", "fonts", "NotoSans-Regular.woff");
+const App_FONT_FAMILY = "Sans";
+let FONT_CSS_CACHE: string | null = null;
 
+async function getFontCss(){
+    if(FONT_CSS_CACHE) return FONT_CSS_CACHE;
+    const buf = await sharp(FONT_PATH).toBuffer();
+    const b64 = buf.toString("base64");
+    FONT_CSS_CACHE = `
+    <style>
+        @font-face {
+            font-family: '${App_FONT_FAMILY}'; 
+            src: url(data:font/woff;base64,${b64}) format('woff'); 
+            font-weight: normal; font-style: normal; font-display: swap;
+        }
+        text { font-family: '${App_FONT_FAMILY}', sans-serif; }
+    </style>`
+
+    return FONT_CSS_CACHE;
+}
 const FIELD_FONT_MULTIPLIER: Record<FieldName, number> = {
   fio: 1.0,
   course: 1.0,
