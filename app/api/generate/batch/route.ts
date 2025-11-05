@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
 import { parse } from "csv-parse/sync";
 import JSZip from "jszip";
 import { put } from "@vercel/blob";
@@ -16,7 +15,7 @@ function todayId(prefix = "CERT"){
   return `${prefix}-${y}${m}${day}-${rand}`;
 }
 import crypto from "node:crypto";
-
+type CsvRow = Record<string, string>;
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     const csvText = await file.text();
-    const records = parse(csvText, { columns: true, skip_empty_lines: true });
+    const records = parse(csvText, { columns: true, skip_empty_lines: true }) as CsvRow[];
 
     const fieldsRes = await fetch(`${process.env.BLOB_BASE_URL ?? ""}/${templateId}/fields.json`);
     if (!fieldsRes.ok) return NextResponse.json({ error: "fields not found" }, { status: 400 });
