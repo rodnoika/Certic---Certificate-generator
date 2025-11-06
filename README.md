@@ -1,7 +1,9 @@
 # Certic - Certificate Generator
 
 Генератор сертификатов с настраиваемыми полями | Certificate generator with customizable fields
+![Demo](./public/video/1.gif)
 
+![Demo](./public/video/2.gif)
 ## Запуск | Setup
 Для работы приложения необходимо указать параметры доступа к Vercel Blob Storage.
 Создайте файл .env.local в корне проекта и добавьте туда следующие переменные:
