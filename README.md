@@ -3,6 +3,10 @@
 Генератор сертификатов с настраиваемыми полями | Certificate generator with customizable fields
 
 ## Запуск | Setup
+Для работы приложения необходимо указать параметры доступа к Vercel Blob Storage.
+Создайте файл .env.local в корне проекта и добавьте туда следующие переменные:
+BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
+BLOB_PUBLIC_BASE_URL=https://your-vercel-blob-url
 
 ```bash
 npm install
