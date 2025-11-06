@@ -1,14 +1,31 @@
 import sharp from "sharp";
 import { wrapToBox } from "./wrap";
 import { slugify } from "./slug";
-import '@fontsource-variable/noto-sans';
+import { readFileSync } from "node:fs";
+import path, { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export type FieldName = "fio" | "course" | "id";
 export type Align = "left" | "center" | "right";
 export type FieldBox = { name: FieldName; x: number; y: number; w: number; h: number; align: Align };
 
-const DEFAULT_FONT_FAMILY = "Inter, Arial, sans-serif";
-
+const NOTO_PATH = path.join(dirname(fileURLToPath(import.meta.url)), "../../../public/font/NotoSans-Regular.ttf");
+const NOTO_WOFF2 = readFileSync(NOTO_PATH);
+const NOTO_WOFF2_B64 = NOTO_WOFF2.toString("base64");
+function SvgFont() {
+  return `
+  <defs>
+    <style type="text/css"><![CDATA[
+      @font-face {
+        font-family: 'NotoSansEmbed';
+        src: url("data:font/woff2;base64,${NOTO_WOFF2_B64}") format('woff2');
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+    ]]></style>
+  </defs>`;
+}
 const FIELD_FONT_MULTIPLIER: Record<FieldName, number> = {
   fio: 1.0,
   course: 1.0,
@@ -17,13 +34,24 @@ const FIELD_FONT_MULTIPLIER: Record<FieldName, number> = {
 
 function escapeXml(s: string){ return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&apos;"}[c]!)); }
 
-function svgTextBlock(lines: string[], fontPx: number, align: Align, x: number, y: number, w: number, h: number, color = "#111") {
+function svgTextBlock(
+  lines: string[],
+  fontPx: number,
+  align: Align,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color = "#111"
+) {
   const anchor = align === "center" ? "middle" : align === "right" ? "end" : "start";
   const xPos   = align === "center" ? x + w / 2 : align === "right" ? x + w : x;
   const lineGap = Math.round(fontPx * 1.25);
   const startY = y + Math.max(fontPx, Math.min(h, Math.round((h - (lines.length - 1) * lineGap) / 2)));
-  const tspans = lines.map((ln, i) => `<tspan x="${xPos}" dy="${i===0?0:lineGap}">${escapeXml(ln)}</tspan>`).join("");
-  return `<text x="${xPos}" y="${startY}" text-anchor="${anchor}" font-family="'Noto Sans Variable', sans-serif;" font-size="${fontPx}" fill="${color}">${tspans}</text>`;
+  const tspans = lines
+    .map((ln, i) => `<tspan x="${xPos}" dy="${i===0?0:lineGap}">${escapeXml(ln)}</tspan>`)
+    .join("");
+  return `<text x="${xPos}" y="${startY}" text-anchor="${anchor}" font-family="NotoSansEmbed, 'Noto Sans', sans-serif" font-size="${fontPx}" fill="${color}">${tspans}</text>`;
 }
 
 export async function renderCertificate(opts: {
@@ -52,7 +80,7 @@ export async function renderCertificate(opts: {
     svgParts.push(svgTextBlock(fit.lines, fit.fontPx, f.align, f.x, f.y, f.w, f.h));
   }
 
-  const svg = Buffer.from(`<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${svgParts.join("")}</svg>`);
+  const svg = Buffer.from(`<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${svgParts.join("")} ${SvgFont()}</svg>`);
   const out = await img.composite([{ input: svg, top: 0, left: 0 }])[(outFormat === "jpg" ? "jpeg" : "png")]().toBuffer();
   return out;
 }
