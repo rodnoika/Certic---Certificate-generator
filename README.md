@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Certic - Certificate Generator
 
-## Getting Started
+Генератор сертификатов с настраиваемыми полями | Certificate generator with customizable fields
 
-First, run the development server:
+## Запуск | Setup
 
 ```bash
+npm install
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Настройка полей на шаблоне | Template Field Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Загрузите шаблон сертификата (PNG/JPG) | Upload your certificate template (PNG/JPG)
+2. Используйте мышь для рисования прямоугольных областей для полей | Use mouse to draw rectangular areas for fields:
+   - 🔷 ФИО | Full Name
+   - 🟩 Курс/Название | Course/Title
+   - 🟧 ID сертификата | Certificate ID
+3. Для каждого поля можно настроить выравнивание (лево/центр/право) | For each field you can set alignment (left/center/right)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Генерация сертификатов | Certificate Generation
 
-## Learn More
+### Одиночная генерация | Single Generation
+- Введите ФИО | Enter full name
+- Введите название курса(ов) через запятую | Enter course name(s) separated by comma
+- Нажмите "Сгенерировать" | Click "Generate"
 
-To learn more about Next.js, take a look at the following resources:
+### Пакетная генерация | Batch Generation
+Загрузите CSV файл со следующими колонками | Upload CSV file with following columns:
+```csv
+fio,courses
+"Иванов Иван Иванович","Курс 1"
+"Петрова Анна Петровна","Курс 2, Курс 3"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Готовые сертификаты | Generated Certificates
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Одиночные сертификаты доступны для скачивания сразу после генерации | Single certificates are available for download right after generation
+- Пакетные сертификаты упаковываются в ZIP-архив | Batch certificates are packed into ZIP archive
+- Все сертификаты сохраняются в формате PNG | All certificates are saved in PNG format
 
-## Deploy on Vercel
+### Структура файлов | File Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Готовые файлы хранятся в Vercel Blob Storage | Generated files are stored in Vercel Blob Storage
+- URL для доступа: `{BLOB_PUBLIC_BASE_URL}/{templateId}/out/` | Access URL: `{BLOB_PUBLIC_BASE_URL}/{templateId}/out/`
+- Формат имени файла: `CERT-{DATE}-{UUID}-{course}-{name}.png` | Filename format: `CERT-{DATE}-{UUID}-{course}-{name}.png`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Логи | Logs
+
+История генерации сохраняется в:
+- `logs/certificates.jsonl` (локально) | Generation history is saved in `logs/certificates.jsonl` (locally)
+- `{templateId}/logs/certificates.jsonl` (Vercel Blob) | `{templateId}/logs/certificates.jsonl` (Vercel Blob)

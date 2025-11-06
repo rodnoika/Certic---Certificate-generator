@@ -3,6 +3,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { parse } from "csv-parse/sync";
 import JSZip from "jszip";
 import { put } from "@vercel/blob";
@@ -44,6 +46,17 @@ function makeTemplateUrlBuilder(templateId: string) {
     new URL(path.replace(/^\/+/, ""), base + "/").toString();
 }
 
+function appendLocalJsonl(lines: string) {
+  try {
+    const localDir = path.join(process.cwd(), "logs");
+    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+    const localPath = path.join(localDir, "certificates.jsonl");
+    fs.appendFileSync(localPath, lines, "utf8");
+  } catch (err) {
+    console.error("local log write failed:", (err as any)?.message || err);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
@@ -74,7 +87,10 @@ export async function POST(req: NextRequest) {
     }
     const { fields } = (await fieldsRes.json()) as { fields: FieldBox[] };
     if (!Array.isArray(fields) || fields.length === 0) {
-      return NextResponse.json({ error: "fields invalid or empty" }, { status: 400 });
+      return NextResponse.json(
+        { error: "fields invalid or empty" },
+        { status: 400 }
+      );
     }
 
     let mime: "image/png" | "image/jpeg" = "image/png";
@@ -88,8 +104,17 @@ export async function POST(req: NextRequest) {
     }
     const templateBuf = Buffer.from(await imgRes.arrayBuffer());
 
+    const templateHash = crypto
+      .createHash("sha256")
+      .update(templateBuf)
+      .digest("hex")
+      .slice(0, 12);
+
     const zip = new JSZip();
     const outExt = "png" as const;
+
+    const logLines: string[] = [];
+    const nowISO = new Date().toISOString();
 
     let produced = 0;
     for (const row of records) {
@@ -114,13 +139,29 @@ export async function POST(req: NextRequest) {
           outFormat: outExt,
         });
         const name = buildFilename(id, course, fio, outExt);
+
         zip.file(name, out);
+
+        logLines.push(
+          JSON.stringify({
+            datetime: nowISO,
+            id,
+            fio,
+            course,
+            filename: name,
+            templateVersion: templateHash,
+          })
+        );
+
         produced++;
       }
     }
 
     if (produced === 0) {
-      return NextResponse.json({ error: "no valid rows in csv" }, { status: 400 });
+      return NextResponse.json(
+        { error: "no valid rows in csv" },
+        { status: 400 }
+      );
     }
 
     const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
@@ -137,6 +178,29 @@ export async function POST(req: NextRequest) {
         allowOverwrite: true,
       }
     );
+
+    try {
+      const logKey = `${keyBase}/logs/certificates.jsonl`;
+      const logUrl = urlOf("logs/certificates.jsonl");
+
+      let existing = "";
+      const existingRes = await fetch(logUrl, { cache: "no-store" });
+      if (existingRes.ok) {
+        existing = await existingRes.text();
+      }
+
+      const payload = (existing ? existing : "") + logLines.join("\n") + "\n";
+
+      await put(logKey, payload, {
+        access: "public",
+        contentType: "application/json; charset=utf-8",
+        allowOverwrite: true,
+      });
+    } catch (err) {
+      console.error("blob log append failed:", (err as any)?.message || err);
+    }
+
+    appendLocalJsonl(logLines.join("\n") + "\n");
 
     return NextResponse.json({ archiveUrl, count: produced });
   } catch (e: any) {

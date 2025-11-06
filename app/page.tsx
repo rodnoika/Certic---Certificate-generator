@@ -70,7 +70,7 @@
       const el = containerRef.current;
       if (!el) return;
       const ro = new ResizeObserver(() => setContainerW(el.clientWidth));
-      setContainerW(el.clientWidth); // первичный замер
+      setContainerW(el.clientWidth);
       ro.observe(el);
       return () => ro.disconnect();
     }, [step]);
@@ -313,7 +313,6 @@
         {step === 1 && (
           <section className="gap-6 items-start">
             <div>
-              {/* TemplateUploader handles local preview callback and server upload */}
               <TemplateUploader
                 onLocalImage={onLocalImage}
                 onUploaded={(data: UploaderTemplateMeta) => {
