@@ -14,9 +14,9 @@ npm run dev
 
 1. Загрузите шаблон сертификата (PNG/JPG) | Upload your certificate template (PNG/JPG)
 2. Используйте мышь для рисования прямоугольных областей для полей | Use mouse to draw rectangular areas for fields:
-   - 🔷 ФИО | Full Name
-   - 🟩 Курс/Название | Course/Title
-   - 🟧 ID сертификата | Certificate ID
+   -  ФИО | Full Name
+   -  Курс/Название | Course/Title
+   -  ID сертификата | Certificate ID
 3. Для каждого поля можно настроить выравнивание (лево/центр/право) | For each field you can set alignment (left/center/right)
 
 ## Генерация сертификатов | Certificate Generation

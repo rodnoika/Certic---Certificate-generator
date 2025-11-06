@@ -42,7 +42,7 @@ export default function GeneratorPanel({
         <div className="space-y-3">
           <div>
             <label className="block text-sm mb-1">ФИО</label>
-            <input className="w-full px-3 py-2 border rounded-lg" placeholder="Иван Иванов" value={fio} onChange={(e) => setFio(e.target.value)} />
+            <input className="w-full px-3 py-2 border rounded-lg" placeholder="Full Name" value={fio} onChange={(e) => setFio(e.target.value)} />
           </div>
           <div>
             <label className="block text-sm mb-1">Курсы (через запятую)</label>
