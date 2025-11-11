@@ -1,4 +1,4 @@
-  "use client";
+﻿  "use client";
   import React, { useEffect, useMemo, useRef, useState } from "react";
   import TemplateUploader, { TemplateMeta as UploaderTemplateMeta } from "./components/TemplateUploader";
   import StepBadge from "./components/ui/StepBadge";
@@ -23,8 +23,8 @@
     hash?: string;
   };
   const FIELD_LABEL: Record<FieldName, string> = {
-    fio: "ФИО",
-    course: "Курс",
+    fio: "Ð¤Ð˜Ðž",
+    course: "ÐšÑƒÑ€Ñ",
     id: "ID",
   };
   const FIELD_COLOR: Record<FieldName, string> = {
@@ -53,11 +53,31 @@
     const [csvFile, setCsvFile] = useState<File | null>(null);
 
     const [generating, setGenerating] = useState(false);
-    const [generated, setGenerated] = useState<{ url: string; file: string }[]>([]);
-    const [archiveUrl, setArchiveUrl] = useState<string | null>(null);
+    const [generated, setGenerated] = useState<{ url: string; file: string; downloadUrl: string }[]>([]);
+    const [archiveDownload, setArchiveDownload] = useState<{ href: string; file: string } | null>(null);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const downloadUrlsRef = useRef<string[]>([]);
+
+    const cleanupDownloads = () => {
+      downloadUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      downloadUrlsRef.current = [];
+    };
+
+    const dataUrlToObjectUrl = async (dataUrl: string) => {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      downloadUrlsRef.current.push(objectUrl);
+      return objectUrl;
+    };
+
+    useEffect(() => {
+      return () => {
+        cleanupDownloads();
+      };
+    }, []);
 
     const { scale, viewW, viewH } = useMemo(() => {
       if (!imageNatural || !containerW) return { scale: 1, viewW: 0, viewH: 0 };
@@ -146,7 +166,7 @@
         ctx.restore();
         ctx.fillStyle = "rgba(37, 99, 235, 0.08)";
         ctx.fillRect(dx, dy, dw, dh);
-        const label = `${draft.w}×${draft.h}px`;
+        const label = `${draft.w}Ã—${draft.h}px`;
         ctx.font = "12px sans-serif";
         const tw = Math.ceil(ctx.measureText(label).width);
         const boxW = tw + 10;
@@ -223,31 +243,31 @@
     };
 
     const handleSaveFields = async () => {
-      if (!template) return alert("Нет шаблона");
-      if (!boxes.length) return alert("Сначала выдели зоны");
+      if (!template) return alert("No template selected");
+      if (!boxes.length) return alert("Please mark zones first");
       const payload = { templateId: template.templateId, fields: boxes };
       const res = await fetch("/api/template/fields", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) return alert("Не удалось сохранить поля");
-      alert("Поля сохранены");
+      if (!res.ok) return alert("Failed to save fields");
       setStep(3);
     };
 
     const handleGenerateSingle = async () => {
-      if (!template) return alert("Нет шаблона");
-      if (!fio.trim()) return alert("Введи ФИО");
+      if (!template) return alert("Select a template first");
+      if (!fio.trim()) return alert("Enter participant name");
       const list = courses
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      if (list.length === 0) return alert("Нужен хотя бы один курс");
+      if (list.length === 0) return alert("Add at least one course");
 
       setGenerating(true);
+      cleanupDownloads();
       setGenerated([]);
-      setArchiveUrl(null);
+      setArchiveDownload(null);
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
@@ -256,7 +276,13 @@
         });
         if (!res.ok) throw new Error(`Generate failed: ${res.status}`);
         const data = (await res.json()) as { files: { url: string; file: string }[] };
-        setGenerated(data.files || []);
+        const processed = await Promise.all(
+          (data.files || []).map(async (file) => ({
+            ...file,
+            downloadUrl: await dataUrlToObjectUrl(file.url),
+          }))
+        );
+        setGenerated(processed);
       } catch (e: any) {
         alert(e.message || "Generate error");
       } finally {
@@ -265,16 +291,17 @@
     };
 
     const handleGenerateBatch = async () => {
-      if (!template) return alert("Нет шаблона");
-      if (!csvFile) return alert("Загрузи CSV");
+      if (!template) return alert("Select a template first");
+      if (!csvFile) return alert("Upload CSV file");
       const fd = new FormData();
       fd.append("file", csvFile);
       fd.append("templateId", template.templateId);
       fd.append("prefix", prefix);
 
       setGenerating(true);
+      cleanupDownloads();
       setGenerated([]);
-      setArchiveUrl(null);
+      setArchiveDownload(null);
       try {
         const res = await fetch("/api/generate/batch", { method: "POST", body: fd });
         if (!res.ok) throw new Error(`Batch failed: ${res.status}`);
@@ -282,8 +309,20 @@
           archiveUrl?: string;
           files?: { url: string; file: string }[];
         };
-        if (data.archiveUrl) setArchiveUrl(data.archiveUrl);
-        if (data.files) setGenerated(data.files);
+        if (data.archiveUrl) {
+          const href = await dataUrlToObjectUrl(data.archiveUrl);
+          const zipName = `${prefix || "CERT"}-certificates.zip`;
+          setArchiveDownload({ href, file: zipName });
+        }
+        if (data.files) {
+          const processed = await Promise.all(
+            data.files.map(async (file) => ({
+              ...file,
+              downloadUrl: await dataUrlToObjectUrl(file.url),
+            }))
+          );
+          setGenerated(processed);
+        }
       } catch (e: any) {
         alert(e.message || "Batch error");
       } finally {
@@ -303,11 +342,11 @@
         <h1 className="text-2xl font-bold mb-4">Certificate Studio</h1>
 
         <div className="mb-6 flex items-center gap-2 text-sm">
-          <StepBadge n={1} current={step} label="Загрузка шаблона" />
+          <StepBadge n={1} current={step} label="Upload Template" />
           <StepDivider />
-          <StepBadge n={2} current={step} label="Разметка зон" />
+          <StepBadge n={2} current={step} label="Mark Zones" />
           <StepDivider />
-          <StepBadge n={3} current={step} label="Генерация" />
+          <StepBadge n={3} current={step} label="Generate" />
         </div>
 
         {step === 1 && (
@@ -362,7 +401,7 @@
             generating={generating}
             onGenerateSingle={handleGenerateSingle}
             onGenerateBatch={handleGenerateBatch}
-            archiveUrl={archiveUrl}
+            archiveDownload={archiveDownload}
             generated={generated}
             onBack={() => setStep(2)}
           />
@@ -370,3 +409,4 @@
       </div>
     );
   }
+

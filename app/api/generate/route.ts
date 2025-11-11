@@ -3,10 +3,8 @@ export const runtime = "nodejs";
 export const maxDuration = 15;
 
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-import { put } from "@vercel/blob";
 import { renderCertificate, buildFilename, type FieldBox } from "../../lib/render";
+import { getFields, getTemplateBuffer } from "../../lib/templateStore";
 
 function todayId(prefix = "CERT") {
   const d = new Date();
@@ -15,17 +13,6 @@ function todayId(prefix = "CERT") {
   const day = String(d.getUTCDate()).padStart(2, "0");
   const rand = crypto.randomUUID().slice(0, 8);
   return `${prefix}-${y}${m}${day}-${rand}`;
-}
-
-function appendLocalJsonl(lines: string) {
-  try {
-    const localDir = path.join(process.cwd(), "logs");
-    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
-    const localPath = path.join(localDir, "certificates.jsonl");
-    fs.appendFileSync(localPath, lines, "utf8");
-  } catch (err) {
-    console.error("local log write failed:", (err as any)?.message || err);
-  }
 }
 
 export async function POST(req: NextRequest) {
@@ -44,37 +31,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "bad payload: templateId,fio,courses[] required" }, { status: 400 });
     }
 
-    const base = process.env.BLOB_PUBLIC_BASE_URL;
-    if (!base) {
-      console.error("BLOB_PUBLIC_BASE_URL missing");
-      return NextResponse.json({ error: "server misconfigured: BLOB_PUBLIC_BASE_URL missing" }, { status: 500 });
+    let fields: FieldBox[];
+    let templateBuf: Buffer;
+    let mime: "image/png" | "image/jpeg";
+    try {
+      fields = getFields(templateId);
+      const tpl = getTemplateBuffer(templateId);
+      templateBuf = tpl.buffer;
+      mime = tpl.mime;
+    } catch (err: any) {
+      console.error("template assets missing", err?.message || err);
+      return NextResponse.json({ error: "template or fields missing" }, { status: 400 });
     }
-
-    const fieldsUrl = `${base}/${templateId}/fields.json`;
-    const fieldsRes = await fetch(fieldsUrl);
-    if (!fieldsRes.ok) {
-      console.error("fields.json not found", fieldsUrl, fieldsRes.status);
-      return NextResponse.json({ error: "fields not found (save fields first)" }, { status: 400 });
-    }
-    const { fields } = (await fieldsRes.json()) as { fields: FieldBox[] };
-    if (!Array.isArray(fields) || fields.length === 0) {
-      console.error("fields.json empty or invalid");
-      return NextResponse.json({ error: "fields invalid or empty" }, { status: 400 });
-    }
-
-    let mime: "image/png" | "image/jpeg" = "image/png";
-    let imgRes = await fetch(`${base}/${templateId}/template.png`);
-    if (!imgRes.ok) {
-      imgRes = await fetch(`${base}/${templateId}/template.jpg`);
-      if (!imgRes.ok) {
-        console.error("template not found as png or jpg");
-        return NextResponse.json({ error: "template not found (upload template)" }, { status: 400 });
-      }
-      mime = "image/jpeg";
-    }
-    const templateBuf = Buffer.from(await imgRes.arrayBuffer());
-
-    const templateHash = crypto.createHash("sha256").update(templateBuf).digest("hex").slice(0, 12);
 
     const id = todayId(prefix || "CERT");
     const outExt = "png" as const;
@@ -92,52 +60,13 @@ export async function POST(req: NextRequest) {
         });
 
         const name = buildFilename(id, course, fio, outExt);
-        const key = `${templateId}/out/${name}`;
-        const { url } = await put(key, out, {
-          access: "public",
-          contentType: `image/${outExt}`,
-          allowOverwrite: true,
-        });
-        files.push({ url, file: name });
+        const dataUrl = `data:image/${outExt};base64,${out.toString("base64")}`;
+        files.push({ url: dataUrl, file: name });
       } catch (e: any) {
-        console.error("upload result failed", e?.message);
-        return NextResponse.json({ error: "upload to blob failed (check token/permissions)" }, { status: 500 });
+        console.error("certificate render failed", e?.message);
+        return NextResponse.json({ error: "render failed" }, { status: 500 });
       }
     }
-
-    const now = new Date().toISOString();
-    const jsonl = files
-      .map((f, i) =>
-        JSON.stringify({
-          datetime: now,
-          id,
-          fio,
-          course: courses[i] ?? "",
-          filename: f.file,
-          templateVersion: templateHash,
-        })
-      )
-      .join("\n") + "\n";
-
-    try {
-      const logKey = `${templateId}/logs/certificates.jsonl`;
-      const logUrl = `${base}/${logKey}`;
-
-      let existing = "";
-      const existingRes = await fetch(logUrl);
-      if (existingRes.ok) {
-        existing = await existingRes.text();
-      }
-      await put(logKey, existing + jsonl, {
-        access: "public",
-        contentType: "application/json; charset=utf-8",
-        allowOverwrite: true,
-      });
-    } catch (e: any) {
-      console.error("blob log append failed:", e?.message || e);
-    }
-
-    appendLocalJsonl(jsonl);
 
     return NextResponse.json({ files });
   } catch (e: any) {

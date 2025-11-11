@@ -3,12 +3,10 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { parse } from "csv-parse/sync";
 import JSZip from "jszip";
-import { put } from "@vercel/blob";
 import { renderCertificate, buildFilename, type FieldBox } from "../../../lib/render";
+import { getFields, getTemplateBuffer } from "../../../lib/templateStore";
 
 type CsvRow = Record<string, string>;
 
@@ -19,42 +17,6 @@ function todayId(prefix = "CERT") {
   const day = String(d.getUTCDate()).padStart(2, "0");
   const rand = crypto.randomUUID().slice(0, 8);
   return `${prefix}-${y}${m}${day}-${rand}`;
-}
-
-function isAbsoluteUrl(s: string) {
-  return /^https?:\/\//i.test(s);
-}
-
-function makeTemplateUrlBuilder(templateId: string) {
-  const ENV_BASE =
-    process.env.BLOB_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_BLOB_BASE_URL ||
-    process.env.BLOB_BASE_URL ||
-    "";
-
-  if (!isAbsoluteUrl(templateId) && !ENV_BASE) {
-    throw new Error("server misconfigured: BLOB_PUBLIC_BASE_URL is missing");
-  }
-
-  const base = isAbsoluteUrl(templateId)
-    ? templateId.replace(/\/+$/, "")
-    : String(ENV_BASE).replace(/\/+$/, "") +
-      "/" +
-      templateId.replace(/^\/+|\/+$/g, "");
-
-  return (path: string) =>
-    new URL(path.replace(/^\/+/, ""), base + "/").toString();
-}
-
-function appendLocalJsonl(lines: string) {
-  try {
-    const localDir = path.join(process.cwd(), "logs");
-    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
-    const localPath = path.join(localDir, "certificates.jsonl");
-    fs.appendFileSync(localPath, lines, "utf8");
-  } catch (err) {
-    console.error("local log write failed:", (err as any)?.message || err);
-  }
 }
 
 export async function POST(req: NextRequest) {
@@ -79,42 +41,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "empty csv" }, { status: 400 });
     }
 
-    const urlOf = makeTemplateUrlBuilder(templateId);
-
-    const fieldsRes = await fetch(urlOf("fields.json"), { cache: "no-store" });
-    if (!fieldsRes.ok) {
-      return NextResponse.json({ error: "fields not found" }, { status: 400 });
+    let fields: FieldBox[];
+    let templateBuf: Buffer;
+    let mime: "image/png" | "image/jpeg";
+    try {
+      fields = getFields(templateId);
+      const tpl = getTemplateBuffer(templateId);
+      templateBuf = tpl.buffer;
+      mime = tpl.mime;
+    } catch (err: any) {
+      console.error("template assets missing", err?.message || err);
+      return NextResponse.json({ error: "template or fields missing" }, { status: 400 });
     }
-    const { fields } = (await fieldsRes.json()) as { fields: FieldBox[] };
-    if (!Array.isArray(fields) || fields.length === 0) {
-      return NextResponse.json(
-        { error: "fields invalid or empty" },
-        { status: 400 }
-      );
-    }
-
-    let mime: "image/png" | "image/jpeg" = "image/png";
-    let imgRes = await fetch(urlOf("template.png"), { cache: "no-store" });
-    if (!imgRes.ok) {
-      imgRes = await fetch(urlOf("template.jpg"), { cache: "no-store" });
-      if (!imgRes.ok) {
-        return NextResponse.json({ error: "template not found" }, { status: 400 });
-      }
-      mime = "image/jpeg";
-    }
-    const templateBuf = Buffer.from(await imgRes.arrayBuffer());
-
-    const templateHash = crypto
-      .createHash("sha256")
-      .update(templateBuf)
-      .digest("hex")
-      .slice(0, 12);
 
     const zip = new JSZip();
     const outExt = "png" as const;
-
-    const logLines: string[] = [];
-    const nowISO = new Date().toISOString();
 
     let produced = 0;
     for (const row of records) {
@@ -142,17 +83,6 @@ export async function POST(req: NextRequest) {
 
         zip.file(name, out);
 
-        logLines.push(
-          JSON.stringify({
-            datetime: nowISO,
-            id,
-            fio,
-            course,
-            filename: name,
-            templateVersion: templateHash,
-          })
-        );
-
         produced++;
       }
     }
@@ -165,44 +95,9 @@ export async function POST(req: NextRequest) {
     }
 
     const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
-    const keyBase = isAbsoluteUrl(templateId)
-      ? templateId.replace(/^https?:\/\/[^/]+\/?/, "").replace(/^\/+|\/+$/g, "")
-      : templateId.replace(/^\/+|\/+$/g, "");
+    const archiveUrl = `data:application/zip;base64,${zipBuf.toString("base64")}`;
 
-    const { url: archiveUrl } = await put(
-      `${keyBase}/out/batch_${Date.now()}.zip`,
-      zipBuf,
-      {
-        access: "public",
-        contentType: "application/zip",
-        allowOverwrite: true,
-      }
-    );
-
-    try {
-      const logKey = `${keyBase}/logs/certificates.jsonl`;
-      const logUrl = urlOf("logs/certificates.jsonl");
-
-      let existing = "";
-      const existingRes = await fetch(logUrl, { cache: "no-store" });
-      if (existingRes.ok) {
-        existing = await existingRes.text();
-      }
-
-      const payload = (existing ? existing : "") + logLines.join("\n") + "\n";
-
-      await put(logKey, payload, {
-        access: "public",
-        contentType: "application/json; charset=utf-8",
-        allowOverwrite: true,
-      });
-    } catch (err) {
-      console.error("blob log append failed:", (err as any)?.message || err);
-    }
-
-    appendLocalJsonl(logLines.join("\n") + "\n");
-
-    return NextResponse.json({ archiveUrl, count: produced });
+    return NextResponse.json({ count: produced, archiveUrl });
   } catch (e: any) {
     console.error("batch error:", e?.stack || e);
     return NextResponse.json(

@@ -1,57 +1,45 @@
-# Certic - Certificate Generator
+﻿# Certic - Certificate Generator
 
-Генератор сертификатов с настраиваемыми полями | Certificate generator with customizable fields
+Certificate generator with customizable fields.
 
-## Запуск | Setup
-Для работы приложения необходимо указать параметры доступа к Vercel Blob Storage.
-Создайте файл .env.local в корне проекта и добавьте туда следующие переменные:
-BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
-BLOB_PUBLIC_BASE_URL=https://your-vercel-blob-url
+## Setup
+Everything runs locally; install dependencies and start the dev server.
 
 ```bash
 npm install
-
 npm run dev
 ```
 
-## Настройка полей на шаблоне | Template Field Setup
+## Template Field Setup
 
-1. Загрузите шаблон сертификата (PNG/JPG) | Upload your certificate template (PNG/JPG)
-2. Используйте мышь для рисования прямоугольных областей для полей | Use mouse to draw rectangular areas for fields:
-   -  ФИО | Full Name
-   -  Курс/Название | Course/Title
-   -  ID сертификата | Certificate ID
-3. Для каждого поля можно настроить выравнивание (лево/центр/право) | For each field you can set alignment (left/center/right)
+1. Upload your certificate template (PNG/JPG).
+2. Use the mouse to draw rectangular areas for the fields:
+   - Full Name
+   - Course/Title
+   - Certificate ID
+3. For each field you can set alignment (left/center/right).
 
-## Генерация сертификатов | Certificate Generation
+## Certificate Generation
 
-### Одиночная генерация | Single Generation
-- Введите ФИО | Enter full name
-- Введите название курса(ов) через запятую | Enter course name(s) separated by comma
-- Нажмите "Сгенерировать" | Click "Generate"
+### Single Generation
+- Enter the recipient name.
+- Enter course names separated by commas.
+- Click "Generate".
 
-### Пакетная генерация | Batch Generation
-Загрузите CSV файл со следующими колонками | Upload CSV file with following columns:
+### Batch Generation
+Upload a CSV file with the following columns:
 ```csv
 fio,courses
-"Иванов Иван Иванович","Курс 1"
-"Петрова Анна Петровна","Курс 2, Курс 3"
+"John Doe","Course 1"
+"Jane Doe","Course 2, Course 3"
 ```
 
-## Готовые сертификаты | Generated Certificates
+## Generated Certificates
 
-- Одиночные сертификаты доступны для скачивания сразу после генерации | Single certificates are available for download right after generation
-- Пакетные сертификаты упаковываются в ZIP-архив | Batch certificates are packed into ZIP archive
-- Все сертификаты сохраняются в формате PNG | All certificates are saved in PNG format
+- Single certificates are returned inline as Data URLs.
+- Batch certificates are packed into ZIP archives and returned as a Data URL.
+- Nothing is persisted to disk: templates, fields, and outputs only live in memory.
 
-### Структура файлов | File Structure
+### File Structure
 
-- Готовые файлы хранятся в Vercel Blob Storage | Generated files are stored in Vercel Blob Storage
-- URL для доступа: `{BLOB_PUBLIC_BASE_URL}/{templateId}/out/` | Access URL: `{BLOB_PUBLIC_BASE_URL}/{templateId}/out/`
-- Формат имени файла: `CERT-{DATE}-{UUID}-{course}-{name}.png` | Filename format: `CERT-{DATE}-{UUID}-{course}-{name}.png`
-
-## Логи | Logs
-
-История генерации сохраняется в:
-- `logs/certificates.jsonl` (локально) | Generation history is saved in `logs/certificates.jsonl` (locally)
-- `{templateId}/logs/certificates.jsonl` (Vercel Blob) | `{templateId}/logs/certificates.jsonl` (Vercel Blob)
+- Generated filenames follow `CERT-{DATE}-{UUID}-{course}-{name}.png`.

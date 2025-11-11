@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 export const maxDuration = 15;
 
 import crypto from "node:crypto";
-import { put } from "@vercel/blob";
+import { storeTemplate } from "../../lib/templateStore";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -15,9 +15,7 @@ export async function POST(req: NextRequest) {
 
   const hash = crypto.createHash("sha256").update(buf).digest("hex");
   const ext = file.type === "image/png" ? "png" : "jpg";
-  const templateId = `tpl_${hash.slice(0,12)}`;
-  const key = `${templateId}/template.${ext}`;
-
-  const { url } = await put(key, buf, { access: "public", contentType: file.type, allowOverwrite: true });
-  return NextResponse.json({ templateId, url, hash });
+  const templateId = `tpl_${hash.slice(0, 12)}`;
+  storeTemplate(templateId, buf, ext);
+  return NextResponse.json({ templateId, hash });
 }

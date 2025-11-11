@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 
 export type TemplateMeta = {
   templateId: string;
@@ -33,8 +33,8 @@ export default function TemplateUploader({
 
   return (
     <div className="border rounded-2xl p-4 bg-white shadow-sm">
-      <h2 className="font-semibold mb-2">1) Загрузка шаблона (PNG/JPG)</h2>
-      <p className="text-sm text-gray-600 mb-3">Выбери файл шаблона сертификата.</p>
+      <h2 className="font-semibold mb-2">1) Upload template (PNG/JPG)</h2>
+      <p className="text-sm text-gray-600 mb-3">Choose the certificate background image.</p>
       <label className="block">
         <input
           type="file"
@@ -48,11 +48,11 @@ export default function TemplateUploader({
           }}
         />
         <div className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-gray-50">
-          <div className="font-medium">Кликни, чтобы выбрать PNG/JPG</div>
-          <div className="text-xs text-gray-500 mt-1">или перетащи сюда</div>
+          <div className="font-medium">Click to pick PNG/JPG</div>
+          <div className="text-xs text-gray-500 mt-1">or drag and drop here</div>
         </div>
       </label>
-      {uploading && <div className="mt-3 text-sm">Загрузка...</div>}
+      {uploading && <div className="mt-3 text-sm">Uploading...</div>}
     </div>
   );
 }

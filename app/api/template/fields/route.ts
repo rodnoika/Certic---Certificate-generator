@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { storeFields } from "../../../lib/templateStore";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
@@ -7,12 +8,11 @@ export async function POST(req: NextRequest) {
   if (!templateId || !Array.isArray(fields)) {
     return NextResponse.json({ error: "bad payload" }, { status: 400 });
   }
-  const { put } = await import("@vercel/blob");
-  const key = `${templateId}/fields.json`;
-  await put(key, Buffer.from(JSON.stringify({ fields }, null, 2)), {
-    access: "public",
-    contentType: "application/json",
-    allowOverwrite: true
-  });
-  return NextResponse.json({ ok: true });
+  try {
+    storeFields(templateId, fields);
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error("failed to save fields", err?.message || err);
+    return NextResponse.json({ error: "save failed" }, { status: 500 });
+  }
 }

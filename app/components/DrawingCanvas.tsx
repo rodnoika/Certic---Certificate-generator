@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 
 type FieldName = "fio" | "course" | "id";
 type Align = "left" | "center" | "right";
@@ -73,7 +73,7 @@ export default function DrawingCanvas({
       ctx.strokeRect(x, y, w, h);
       ctx.font = "12px sans-serif";
       ctx.fillStyle = "#111";
-      const label = b.name === "fio" ? "ФИО" : b.name === "course" ? "Курс" : "ID";
+      const label = b.name === "fio" ? "Full Name" : b.name === "course" ? "Course" : "ID";
       ctx.fillText(`${label} (${b.align})`, x + 6, y + 16);
     });
 
@@ -90,7 +90,7 @@ export default function DrawingCanvas({
       ctx.restore();
       ctx.fillStyle = "rgba(37, 99, 235, 0.08)";
       ctx.fillRect(dx, dy, dw, dh);
-      const label = `${draft.w}×${draft.h}px`;
+      const label = `${draft.w}x${draft.h}px`;
       ctx.font = "12px sans-serif";
       const tw = Math.ceil(ctx.measureText(label).width);
       const boxW = tw + 10;
@@ -151,9 +151,10 @@ export default function DrawingCanvas({
 
   return (
     <div className="border rounded-2xl p-4 bg-white shadow-sm" ref={containerRef}>
-      <h2 className="font-semibold mb-3">2) Разметка зон</h2>
+      <h2 className="font-semibold mb-3">2) Define fields</h2>
+
       {!imageNatural ? (
-        <div className="text-sm text-gray-600">Нет изображения. Вернись на шаг 1.</div>
+        <div className="text-sm text-gray-600">No image yet. Go back to step 1.</div>
       ) : (
         <div className="relative">
           <canvas
@@ -170,3 +171,5 @@ export default function DrawingCanvas({
     </div>
   );
 }
+
+
